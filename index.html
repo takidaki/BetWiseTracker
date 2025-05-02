@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Soccer Rating (Home/Away)</title>
+</head>
+<body>
+  <h1>Soccer Rating (Home/Away)</h1>
+
+  <!-- Country dropdown -->
+  <div style="margin-bottom: 1em;">
+    <label for="country-select">Select a country:</label>
+    <select id="country-select">
+      <option value="">-- Select a country --</option>
+    </select>
+  </div>
+
+  <!-- League dropdown -->
+  <div style="margin-bottom: 1em;">
+    <label for="league-select">Select a league:</label>
+    <select id="league-select">
+      <option value="">-- Select a league --</option>
+    </select>
+  </div>
+
+  <!-- Home/Away dropdown -->
+  <div style="margin-bottom: 1em;">
+    <label for="type-select">Match type:</label>
+    <select id="type-select">
+      <option value="">-- Select type --</option>
+      <option value="home">Home</option>
+      <option value="away">Away</option>
+    </select>
+  </div>
+
+  <!-- Fetch button -->
+  <button id="fetch-btn">Fetch Data</button>
+
+  <!-- Results -->
+  <h2>Result</h2>
+  <div id="result"
+       style="border:1px solid #ccc; padding:10px; margin-top:10px; height:400px; overflow:auto;">
+  </div>
+
+  <script>
+    let countryLeaguesData = {};
+
+    // 1) Load the countries + leagues from our Flask API
+    fetch('/api/countries')
+      .then(res => res.json())
+      .then(data => {
+        countryLeaguesData = data;
+        const countrySelect = document.getElementById('country-select');
+
+        // Populate the "country" dropdown
+        Object.keys(data).forEach(country => {
+          const option = document.createElement('option');
+          option.value = country;
+          option.textContent = country;
+          countrySelect.appendChild(option);
+        });
+      })
+      .catch(err => {
+        console.error('Error fetching countries:', err);
+      });
+
+    // 2) When a country is selected, populate the "league" dropdown
+    document.getElementById('country-select').addEventListener('change', (e) => {
+      const selectedCountry = e.target.value;
+      const leagueSelect = document.getElementById('league-select');
+      leagueSelect.innerHTML = '<option value="">-- Select a league --</option>';
+
+      if (selectedCountry && countryLeaguesData[selectedCountry]) {
+        countryLeaguesData[selectedCountry].forEach(leagueId => {
+          const option = document.createElement('option');
+          option.value = leagueId;
+          option.textContent = leagueId;
+          leagueSelect.appendChild(option);
+        });
+      }
+    });
+
+    // 3) On "Fetch Data" click, build the URL and fetch
+    document.getElementById('fetch-btn').addEventListener('click', () => {
+      const country = document.getElementById('country-select').value;
+      const leagueId = document.getElementById('league-select').value;
+      const matchType = document.getElementById('type-select').value;
+      const resultDiv = document.getElementById('result');
+
+      if (!country) {
+        alert('Please select a country');
+        return;
+      }
+      if (!leagueId) {
+        alert('Please select a league');
+        return;
+      }
+      if (!matchType) {
+        alert('Please select match type (home/away)');
+        return;
+      }
+
+      // Our Flask endpoint: /league/<country>/<league_id>/<match_type>
+      const url = `/league/${country}/${leagueId}/${matchType}`;
+
+      fetch(url)
+        .then(res => {
+          if (!res.ok) {
+            throw new Error(`Error (status: ${res.status})`);
+          }
+          return res.text(); // HTML response
+        })
+        .then(html => {
+          resultDiv.innerHTML = html;
+        })
+        .catch(err => {
+          console.error('Fetch error:', err);
+          resultDiv.textContent = 'Error fetching data. Check console for details.';
+        });
+    });
+  </script>
+</body>
+</html>
